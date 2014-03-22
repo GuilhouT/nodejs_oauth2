@@ -10,6 +10,7 @@ var http = require('http');
 var path = require('path');
 var passport = require('passport');
 var FacebookStrategy = require('passport-facebook').Strategy;
+var GitHubStrategy = require('passport-github').Strategy;
 
 /**
  * Passport config data
@@ -23,7 +24,10 @@ if (fs.existsSync(passport_conf_path)) {
 } else {
   passport_conf = {
     FB_APP_ID: 'your app id',
-    FB_APP_SECRET: 'your app secret'
+    FB_APP_SECRET: 'your app secret',
+
+    GH_APP_ID: 'your app id',
+    GH_APP_SECRET: 'your app secret'
   };
 }
 
@@ -54,7 +58,7 @@ if ('development' == app.get('env')) {
 }
 
 /**
- * Setup Passport
+ * Passport setup
  */
 
 passport.use(new FacebookStrategy({
@@ -62,6 +66,17 @@ passport.use(new FacebookStrategy({
   clientSecret: passport_conf.FB_APP_SECRET,
   callbackURL: 'http://localhost:3000/auth/facebook/callback'
 }, function (accesToken, refreshToken, profile, done) {
+  process.nextTick(function () {
+    // Assuming user exists
+    done(null, profile);
+  });
+}));
+
+passport.use(new GitHubStrategy({
+  clientID: passport_conf.GH_APP_ID,
+  clientSecret: passport_conf.GH_APP_SECRET,
+  callbackURL: 'http://localhost:3000/auth/github/callback'
+}, function (accessToken, refreshToken, profile, done) {
   process.nextTick(function () {
     // Assuming user exists
     done(null, profile);
@@ -77,7 +92,7 @@ passport.deserializeUser(function (obj, done) {
 });
 
 /**
- * end of Setup Passport
+ * end of Passport setup
  */
 
 /**
@@ -88,10 +103,26 @@ app.get('/', routes.index);
 app.get('/users', user.list);
 
 app.get('/auth/facebook', passport.authenticate('facebook'));
-app.get('/auth/facebook/callback', passport.authenticate('facebook', {
-  successRedirect: '/success',
-  failureRedirect: '/error'
-}));
+app.get('/auth/facebook/callback',
+  passport.authenticate('facebook'),
+  function (req, res) {
+    if (!req.user) {
+      return res.redirect('/error');
+    }
+    user.show(req, res);
+  }
+);
+
+app.get('/auth/github', passport.authenticate('github'));
+app.get('/auth/github/callback',
+  passport.authenticate('github'),
+  function (req, res) {
+    if (!req.user) {
+      return res.redirect('/error');
+    }
+    user.show(req, res);
+  }
+);
 
 app.get('/success', function (req, res, next) {
   res.send('Succesfully logged in.');
@@ -99,6 +130,13 @@ app.get('/success', function (req, res, next) {
 
 app.get('/error', function (req, res, next) {
   res.send('Error logging in.');
+});
+
+app.get('/profile', user.show);
+
+app.get('/logout', function (req, res, next) {
+  req.logout();
+  res.send('You have logged out');
 });
 
 /**
