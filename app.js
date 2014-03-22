@@ -19,11 +19,8 @@ var passport_conf_path = 'passport_config.json',
     passport_conf = {};
 
 if (fs.existsSync(passport_conf_path)) {
-  console.log('Config file exists');
   passport_conf = JSON.parse(fs.readFileSync(passport_conf_path));
-  console.log(passport_conf);
 } else {
-  console.log('Conf file doesn\'t exist');
   passport_conf = {
     FB_APP_ID: 'your app id',
     FB_APP_SECRET: 'your app secret'
